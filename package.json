@@ -1,0 +1,23 @@
+{
+  "name": "book-scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/misspants87/book-scraper.git"
+  },
+  "author": "sarah.debey@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/misspants87/book-scraper/issues"
+  },
+  "homepage": "https://github.com/misspants87/book-scraper#readme",
+  "dependencies": {
+    "puppeteer": "^5.4.1"
+  }
+}
