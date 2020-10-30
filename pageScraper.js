@@ -8,16 +8,7 @@ const scraperObject = {
   async scraper(browser) {
     let allUrls = [];
 
-
-    let page = await browser.newPage();
-    console.log(`Navigating to ${this.url}...`);
-    await page.goto(this.url);
-    //Wait for the required DOM to be rendered
-    await page.waitForSelector('.page_inner');
-    await scrapeCurrentPage();
-
     async function scrapeCurrentPage() {
-      console.log('yo');
       let urls = await page.$$eval('section ol > li', links => {
         //Make sure the book to be scraped is in stock
         links = links.filter(link => link.querySelector('.instock.availability > i'))
@@ -29,9 +20,6 @@ const scraperObject = {
         allUrls.push(url);
       })
       let nextUrl = await page.evaluate(() => {
-        // await page.waitForSelector('.page_inner');
-        console.log('page.evaluate')
-        console.log(document.querySelector('.next > a'));
         if (document.querySelector('.next > a')) {
            return document.querySelector('.next > a').href;
         } else {
@@ -54,6 +42,29 @@ const scraperObject = {
         return;
       }
     }
+
+    async function getAllCategories() {
+      let categories = await page.$$eval('.side_categories > ul > li > ul > li > a', allCategories => {
+        allCategories = allCategories.map(category => category.href)
+        return allCategories;
+      })
+      return categories;
+    }
+
+    //LET THE SCRAPING COMMENCE
+    //Open first page
+    let page = await browser.newPage();
+    console.log(`Navigating to ${this.url}...`);
+    await page.goto(this.url);
+    //Wait for the required DOM to be rendered
+    await page.waitForSelector('.page_inner');
+
+    //Pick the category of books to scrape
+    let listOfCategoryLinks = await getAllCategories();
+    let category = listOfCategoryLinks[Math.floor(Math.random() * listOfCategoryLinks.length)];
+    //Go to the page of the category that was chosen, and begin scraping
+    await page.goto(category);
+    await scrapeCurrentPage();
 
     //urls is now an array of links for the books that are in stock
     //Loop through each of those links, open a new page instance and get the relevant data
@@ -92,12 +103,12 @@ const scraperObject = {
     // })
 
     //Better, requires less memory
-    let allTitles = []
+    let allBooks = []
     for (link in allUrls) {
       let bookInfo = await pagePromise(allUrls[link]);
-      allTitles.push(bookInfo);
+      allBooks.push(bookInfo);
     }
-    return allTitles;
+    return allBooks;
 
   }
 }
