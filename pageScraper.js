@@ -1,14 +1,12 @@
 //performs the actual scraping
 
-// You will add a new function called scrapeCurrentPage() to your scraper() method. This function will contain all the code that scrapes data from a particular page and then click the next button if it exists. Add the following highlighted code:
+//page.$eval(selector, pageFunction) => choose element based on selector, passes that element to document.querySelector
+//page.querySelector(selector) => runs document.querySelector on page, returns null if nothing found
 
-
-('li.next > a')
 const scraperObject = {
   url: 'http://books.toscrape.com',
   async scraper(browser) {
-
-    //add scrapCurrentPage() method that collects all the urls from each page. If there's a next button, call scrapeCurrentPage() again
+    let allUrls = [];
 
 
     let page = await browser.newPage();
@@ -16,22 +14,51 @@ const scraperObject = {
     await page.goto(this.url);
     //Wait for the required DOM to be rendered
     await page.waitForSelector('.page_inner');
+    await scrapeCurrentPage();
 
-    //Get the link to all the required books
-    //page.$$eval returns an array of all matching elements
-    let urls = await page.$$eval('section ol > li', links => {
-      //Make sure the book to be scraped is in stock
-      links = links.filter(link => link.querySelector('.instock.availability > i'))
-      //Extract the links from the data
-      links = links.map(el => el.querySelector('h3 > a').href)
-      return links;
-    });
-    // console.log(urls);
+    async function scrapeCurrentPage() {
+      console.log('yo');
+      let urls = await page.$$eval('section ol > li', links => {
+        //Make sure the book to be scraped is in stock
+        links = links.filter(link => link.querySelector('.instock.availability > i'))
+        //Extract the links from the data
+        links = links.map(el => el.querySelector('h3 > a').href)
+        return links;
+      });
+      urls.map(url => {
+        allUrls.push(url);
+      })
+      let nextUrl = await page.evaluate(() => {
+        // await page.waitForSelector('.page_inner');
+        console.log('page.evaluate')
+        console.log(document.querySelector('.next > a'));
+        if (document.querySelector('.next > a')) {
+           return document.querySelector('.next > a').href;
+        } else {
+          return false;
+        }
+      })
 
+      if (nextUrl) {
+
+        await page.goto(nextUrl);
+          //When just kept going to second page for infinity: I was going to the second page, but 'page' was still the first page, so the first page just kept being scraped. Have to change page to the new page, then scrape that new page.
+          //Old non-working code
+          // let nextPage = await browser.newPage();
+          // await nextPage.goto(nextUrl)
+
+        await page.waitForSelector('.page_inner');
+        //recursive call to scrape the next page
+        await scrapeCurrentPage();
+      } else {
+        return;
+      }
+    }
 
     //urls is now an array of links for the books that are in stock
     //Loop through each of those links, open a new page instance and get the relevant data
     let pagePromise = (link) => new Promise(async(resolve,reject) => {
+      console.log('oy');
       let dataObj = {};
       let newPage = await browser.newPage();
       await newPage.goto(link);
@@ -55,20 +82,22 @@ const scraperObject = {
 
     //loop through urls, and call pagePromise on each link
     //This works, but the callback function (return pagePromise(link)) will have to go through the callback queue and event loop first, hence, multiple page instances will be open all at once. This will place a much larger strain on your memory than a for/in loop
-    // let bookInfo = urls.map((link) => {
+    // let bookInfo = allUrls.map((link) => {
     //   return pagePromise(link)
     // })
-    //
+    // //
     // Promise.all(bookInfo)
     // .then(allBooksInfo => {
     //   console.log(allBooksInfo);
     // })
 
     //Better, requires less memory
-    for (link in urls) {
-      let bookInfo = await pagePromise(urls[link]);
-      console.log(bookInfo);
+    let allTitles = []
+    for (link in allUrls) {
+      let bookInfo = await pagePromise(allUrls[link]);
+      allTitles.push(bookInfo);
     }
+    return allTitles;
 
   }
 }
